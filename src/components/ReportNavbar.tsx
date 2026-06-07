@@ -93,7 +93,7 @@ const ReportNavbar = () => {
     const token = localStorage.getItem("accessToken");
     if (token) {
       try {
-        const decoded = jwtDecode(token);
+        const decoded = jwtDecode(token) as any;
         setIsLoggedIn(true);
         setIsOfficer(decoded.is_officer || false);
         setNavLinks(

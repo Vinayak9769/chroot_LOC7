@@ -37,7 +37,7 @@ const PoliceProfile = () => {
   const [error, setError] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const decoded = jwtDecode(localStorage.getItem("accessToken") || "")
+  const decoded = jwtDecode(localStorage.getItem("accessToken") || "") as any;
 
   useEffect(() => {
     fetchProfile();

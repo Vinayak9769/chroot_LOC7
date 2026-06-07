@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Circle,
   MapContainer,
-  Marker,
   Popup,
   TileLayer,
   useMap,
@@ -104,7 +103,7 @@ const cases = [
 
 interface Case {
   id: number;
-  location: [number, number];
+  location: number[];
   address: string;
   case_type: string;
   no_of_cases: number;
@@ -114,14 +113,12 @@ interface Case {
   colour: string;
 }
 
-const MapController: React.FC<{ center: [number, number] | null }> = ({
-  center,
-}) => {
+const MapController: React.FC<{ center: number[] | null }> = ({ center }) => {
   const map = useMap();
 
   useEffect(() => {
     if (center) {
-      map.setView(center, 15);
+      map.setView(center as any, 15);
     }
   }, [center, map]);
 
@@ -134,9 +131,9 @@ const Map: React.FC = () => {
   );
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [suggestions, setSuggestions] = useState<Case[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<
-    [number, number] | null
-  >(null);
+  const [selectedLocation, setSelectedLocation] = useState<number[] | null>(
+    null
+  );
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -234,7 +231,7 @@ const Map: React.FC = () => {
           {cases.map((item) => (
             <Circle
               key={item.id}
-              center={item.location}
+              center={item.location as any}
               radius={item.radius}
               color="transparent"
               fillColor={item.colour}

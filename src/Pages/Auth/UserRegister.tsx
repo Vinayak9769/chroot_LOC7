@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 // import imgSrc from "../../assets/freelancer-working-laptop-her-house.png";
 // import loadingAnimation from "../../assets/Animation - 1726660821372.webm";
 import { baseUrl } from "../../App";
-import registerImage from "../../assets/authImage.png";
 // import useAuth from "../../hooks/useAuth";
 
 const UserRegister: React.FC = () => {

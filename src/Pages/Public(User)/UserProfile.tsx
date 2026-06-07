@@ -28,7 +28,7 @@ const UserProfile = () => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const token = localStorage.getItem("accessToken");
-  const decoded = token ? jwtDecode(token) : null;
+  const decoded = token ? (jwtDecode(token) as any) : null;
   console.log(decoded)
 
   useEffect(() => {

@@ -19,7 +19,7 @@ const EmergencyContacts = () => {
     emergency_contact_phone: ''
   });
   const token = localStorage.getItem("accessToken");
-  const decoded = token ? jwtDecode(token) : null;
+  const decoded = token ? (jwtDecode(token) as any) : null;
 
   useEffect(() => {
     fetchContacts();

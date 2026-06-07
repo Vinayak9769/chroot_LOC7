@@ -11,7 +11,19 @@ import {
   deleteDoc,
   getDoc,
 } from "firebase/firestore";
-import { MessageCircle, MoreVertical, Copy, PhoneOff } from "lucide-react";
+import { MoreVertical, Copy, PhoneOff } from "lucide-react";
+
+type MenuProps = {
+  joinCode: string;
+  setJoinCode: (v: string) => void;
+  setPage: (p: string) => void;
+};
+
+type VideosProps = {
+  mode: string;
+  callId: string;
+  setPage: (p: string) => void;
+};
 
 const firebaseConfig = {
   apiKey: "AIzaSyClroqJi7PTRdFC1CWpsM4PHQbixZUJU8s",
@@ -36,7 +48,7 @@ const servers = {
 };
 
 // ... Menu component remains the same ...
-const Menu = ({ joinCode, setJoinCode, setPage }) => {
+const Menu: React.FC<MenuProps> = ({ joinCode, setJoinCode, setPage }) => {
   return (
     <div className="flex flex-col items-center justify-center gap-8 p-8">
       <div className="w-full max-w-md">
@@ -66,14 +78,14 @@ const Menu = ({ joinCode, setJoinCode, setPage }) => {
   );
 };
 
-const Videos = ({ mode, callId, setPage }) => {
+const Videos: React.FC<VideosProps> = ({ mode, callId, setPage }) => {
   const [webcamActive, setWebcamActive] = useState(false);
   const [roomId, setRoomId] = useState(callId);
   const [error, setError] = useState("");
   const [isRetrying, setIsRetrying] = useState(false);
-  const localRef = useRef();
-  const remoteRef = useRef();
-  const peerConnection = useRef();
+  const localRef = useRef<HTMLVideoElement | null>(null);
+  const remoteRef = useRef<HTMLVideoElement | null>(null);
+  const peerConnection = useRef<RTCPeerConnection | null>(null);
 
   useEffect(() => {
     // Create a new RTCPeerConnection when the component mounts
@@ -81,9 +93,7 @@ const Videos = ({ mode, callId, setPage }) => {
 
     // Cleanup when component unmounts
     return () => {
-      if (peerConnection.current) {
-        peerConnection.current.close();
-      }
+      peerConnection.current?.close();
     };
   }, []);
 
@@ -94,12 +104,14 @@ const Videos = ({ mode, callId, setPage }) => {
 
       // Clean up existing streams
       if (localRef.current?.srcObject) {
-        localRef.current.srcObject.getTracks().forEach((track) => track.stop());
+        (localRef.current.srcObject as MediaStream)
+          .getTracks()
+          .forEach((track: MediaStreamTrack) => track.stop());
       }
       if (remoteRef.current?.srcObject) {
-        remoteRef.current.srcObject
+        (remoteRef.current.srcObject as MediaStream)
           .getTracks()
-          .forEach((track) => track.stop());
+          .forEach((track: MediaStreamTrack) => track.stop());
       }
 
       const localStream = await navigator.mediaDevices.getUserMedia({
@@ -109,17 +121,17 @@ const Videos = ({ mode, callId, setPage }) => {
       const remoteStream = new MediaStream();
 
       localStream.getTracks().forEach((track) => {
-        peerConnection.current.addTrack(track, localStream);
+        peerConnection.current?.addTrack(track, localStream);
       });
 
-      peerConnection.current.ontrack = (event) => {
-        event.streams[0].getTracks().forEach((track) => {
+      peerConnection.current!.ontrack = (event: RTCTrackEvent) => {
+        event.streams[0].getTracks().forEach((track: MediaStreamTrack) => {
           remoteStream.addTrack(track);
         });
       };
 
-      localRef.current.srcObject = localStream;
-      remoteRef.current.srcObject = remoteStream;
+      if (localRef.current) localRef.current.srcObject = localStream;
+      if (remoteRef.current) remoteRef.current.srcObject = remoteStream;
 
       setWebcamActive(true);
       setIsRetrying(false);
@@ -131,13 +143,14 @@ const Videos = ({ mode, callId, setPage }) => {
 
         setRoomId(callDoc.id);
 
-        peerConnection.current.onicecandidate = (event) => {
-          event.candidate &&
+        peerConnection.current!.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
+          if (event.candidate) {
             setDoc(doc(offerCandidates), event.candidate.toJSON());
+          }
         };
 
-        const offerDescription = await peerConnection.current.createOffer();
-        await peerConnection.current.setLocalDescription(offerDescription);
+        const offerDescription = await peerConnection.current!.createOffer();
+        await peerConnection.current!.setLocalDescription(offerDescription);
 
         await setDoc(callDoc, {
           offer: {
@@ -148,12 +161,9 @@ const Videos = ({ mode, callId, setPage }) => {
 
         onSnapshot(callDoc, (snapshot) => {
           const data = snapshot.data();
-          if (
-            !peerConnection.current.currentRemoteDescription &&
-            data?.answer
-          ) {
+          if (!peerConnection.current?.currentRemoteDescription && data?.answer) {
             const answerDescription = new RTCSessionDescription(data.answer);
-            peerConnection.current.setRemoteDescription(answerDescription);
+            peerConnection.current?.setRemoteDescription(answerDescription as any);
           }
         });
 
@@ -161,7 +171,7 @@ const Videos = ({ mode, callId, setPage }) => {
           snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
               const candidate = new RTCIceCandidate(change.doc.data());
-              peerConnection.current.addIceCandidate(candidate);
+              peerConnection.current?.addIceCandidate(candidate as any);
             }
           });
         });
@@ -170,9 +180,8 @@ const Videos = ({ mode, callId, setPage }) => {
         const answerCandidates = collection(callDoc, "answerCandidates");
         const offerCandidates = collection(callDoc, "offerCandidates");
 
-        peerConnection.current.onicecandidate = (event) => {
-          event.candidate &&
-            setDoc(doc(answerCandidates), event.candidate.toJSON());
+        peerConnection.current!.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
+          if (event.candidate) setDoc(doc(answerCandidates), event.candidate.toJSON());
         };
 
         const callData = (await getDoc(callDoc)).data();
@@ -184,12 +193,12 @@ const Videos = ({ mode, callId, setPage }) => {
         }
 
         const offerDescription = callData.offer;
-        await peerConnection.current.setRemoteDescription(
-          new RTCSessionDescription(offerDescription)
+        await peerConnection.current!.setRemoteDescription(
+          new RTCSessionDescription(offerDescription) as any
         );
 
-        const answerDescription = await peerConnection.current.createAnswer();
-        await peerConnection.current.setLocalDescription(answerDescription);
+        const answerDescription = await peerConnection.current!.createAnswer();
+        await peerConnection.current!.setLocalDescription(answerDescription as any);
 
         await updateDoc(callDoc, {
           answer: {
@@ -201,36 +210,36 @@ const Videos = ({ mode, callId, setPage }) => {
         onSnapshot(offerCandidates, (snapshot) => {
           snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
-              const candidate = new RTCIceCandidate(change.doc.data());
-              peerConnection.current.addIceCandidate(candidate);
+                const candidate = new RTCIceCandidate(change.doc.data());
+              peerConnection.current?.addIceCandidate(candidate as any);
             }
           });
         });
       }
 
-      peerConnection.current.onconnectionstatechange = () => {
-        if (peerConnection.current.connectionState === "disconnected") {
+      peerConnection.current!.onconnectionstatechange = () => {
+        if (peerConnection.current?.connectionState === "disconnected") {
           hangUp();
         }
       };
     } catch (err) {
       console.error(err);
       setIsRetrying(false);
-
-      if (err.name === "NotReadableError") {
+      const e = err as any;
+      if (e?.name === "NotReadableError") {
         setError(
           "Camera or microphone is in use by another application. Please close other applications using your camera/microphone and try again."
         );
-      } else if (err.name === "NotFoundError") {
+      } else if (e?.name === "NotFoundError") {
         setError(
           "No camera or microphone found. Please connect a device and try again."
         );
-      } else if (err.name === "NotAllowedError") {
+      } else if (e?.name === "NotAllowedError") {
         setError(
           "Camera/microphone permission denied. Please allow access and try again."
         );
-      } else if (err.message?.includes("Call not found")) {
-        setError(err.message);
+      } else if (e?.message?.includes("Call not found")) {
+        setError(e.message);
       } else {
         setError(
           "Failed to set up media devices. Please try again or use a different device."
@@ -241,15 +250,17 @@ const Videos = ({ mode, callId, setPage }) => {
 
   const hangUp = async () => {
     if (localRef.current?.srcObject) {
-      localRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      (localRef.current.srcObject as MediaStream)
+        .getTracks()
+        .forEach((track: MediaStreamTrack) => track.stop());
     }
     if (remoteRef.current?.srcObject) {
-      remoteRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      (remoteRef.current.srcObject as MediaStream)
+        .getTracks()
+        .forEach((track: MediaStreamTrack) => track.stop());
     }
 
-    if (peerConnection.current) {
-      peerConnection.current.close();
-    }
+    peerConnection.current?.close();
 
     if (roomId) {
       const roomRef = doc(firestore, "calls", roomId);
@@ -260,8 +271,8 @@ const Videos = ({ mode, callId, setPage }) => {
         collection(roomRef, "offerCandidates")
       );
 
-      answerCandidates.forEach(async (doc) => await deleteDoc(doc.ref));
-      offerCandidates.forEach(async (doc) => await deleteDoc(doc.ref));
+      answerCandidates.forEach(async (d) => await deleteDoc(d.ref));
+      offerCandidates.forEach(async (d) => await deleteDoc(d.ref));
       await deleteDoc(roomRef);
     }
 

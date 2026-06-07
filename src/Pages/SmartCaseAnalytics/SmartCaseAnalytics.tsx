@@ -16,9 +16,23 @@ interface PredictiveInsight {
   }[];
 }
 
+interface CaseData {
+  id: number;
+  caseNumber: string;
+  created_at: string;
+  incident_type: string;
+  location: string;
+  coordinates: [number, number];
+  description: string;
+  estimated_loss?: string;
+  accused?: Record<string, any>;
+  officer?: Record<string, any>;
+  reported_by?: Record<string, any>;
+}
+
 interface SmartCaseAnalyticsProps {
-  caseData: CaseData;
-  predictiveInsights: PredictiveInsight;
+  caseData?: CaseData;
+  predictiveInsights?: PredictiveInsight;
 }
 
 export function SmartCaseAnalytics({

@@ -209,7 +209,7 @@ const IncidentDetails: React.FC = () => {
         <h2 className="text-xl font-semibold mb-4">Media</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <img
-            src={incidentDetailsData.file}
+            src={incidentDetailsData.media?.[0]?.url || ""}
             alt="Incident media"
             className="max-w-full max-h-full"
           />
